@@ -115,7 +115,7 @@ function Header() {
             <NavLink to="/previous" className={getNavLinkClasses} onClick={toggleMobileMenu}>
               Previous Tasks
             </NavLink>
-            <NavLink className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-500 border border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900">
+            <NavLink to="/login" className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-500 border border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900">
               Login
             </NavLink>
           </div>
