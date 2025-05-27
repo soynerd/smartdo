@@ -1,31 +1,43 @@
 export default function parseChecklist(markdown) {
-  console.log("sreeApi->ParseAI",markdown);
+  console.log("sreeApi->ParseAI", markdown);
   const sections = [];
   const lines = markdown.split("\n");
 
+  let mainTitle = null;
   let currentSection = null;
 
   for (const line of lines) {
-    const headingMatch = line.match(/^\*\*(.+?)\*\*$/);
-    const itemMatch = line.match(/^- (.+)/);
+    // Match main title (starts with #)
+    const mainTitleMatch = line.match(/^#\s+(.+)/);
+    if (mainTitleMatch && !mainTitle) {
+      mainTitle = {
+        title: mainTitleMatch[1].trim(),
+        items: []
+      };
+      continue;
+    }
+
+    // Match section headings like ## **Clothing**
+    const headingMatch = line.match(/^(\#*\s*)?\*\*(.+?)\*\*\s*$/);
+    const itemMatch = line.match(/^- \[ \] (.+)/);
 
     if (headingMatch) {
-      // New section starts
       if (currentSection) sections.push(currentSection);
       currentSection = {
-        title: headingMatch[1],
+        title: headingMatch[2].trim(),
         items: []
       };
     } else if (itemMatch && currentSection) {
       currentSection.items.push({
-        label: itemMatch[1],
+        label: itemMatch[1].trim(),
         checked: false
       });
     }
   }
 
   if (currentSection) sections.push(currentSection);
-  console.log("ParseAiREsopnse", sections)
-  return sections; //return object
-  
+
+  const result = mainTitle ? [mainTitle, ...sections] : sections;
+  console.log("ParseAiResponse", result);
+  return result;
 }
