@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import authStatus from "../api/authStatus";
 import logout from "../api/logout";
 
@@ -7,12 +7,15 @@ function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [status, setStatus] = useState(false);
 
+  const navigate = useNavigate();
  useEffect(()=>{
   authStatus().then(setStatus);
+  
  }, [status])
 
  const handleLogout = () =>{
   logout().then(setStatus(false));
+  navigate("/")
  }
 
   const toggleMobileMenu = () => {
