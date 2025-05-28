@@ -4,14 +4,19 @@ import auth from "../config/config";
 import { useNavigate } from "react-router-dom";
 import fetchData from "../api/fetchUserTasks";
 export default function TaskList() {
-  const tasks = JSON.parse(localStorage.getItem(auth.local_Storage.userTasksStorageKey)) || [];
+  const [tasks, setTasks] = useState(JSON.parse(localStorage.getItem(auth.local_Storage.userTasksStorageKey)) || []);
   const [searchTerm, setSearchTerm] = useState("");
 
   const navigate = useNavigate();
 
-  useEffect(()=>{
-    fetchData();
-  })
+  useEffect(() => {
+    async function fetch() {
+      const temp = await fetchData()
+      setTasks(temp);
+    }
+    fetch();
+    
+  }, [navigate]);
 
   console.log(tasks)
   const filteredTasks = useMemo(() => {
