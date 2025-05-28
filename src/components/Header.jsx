@@ -1,35 +1,41 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-// You would typically import your routing setup (e.g., BrowserRouter, Routes)
-// in your App.js or index.js, not directly in the Header component.
-// This component assumes react-router-dom is already set up.
+import React, { useEffect, useState } from "react";
+import { NavLink } from "react-router-dom";
+import authStatus from "../api/authStatus";
+import logout from "../api/logout";
 
 function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [status, setStatus] = useState(false);
 
-  // Function to toggle the mobile menu visibility
+ useEffect(()=>{
+  authStatus().then(setStatus);
+ }, [status])
+
+ const handleLogout = () =>{
+  logout().then(setStatus(false));
+ }
+
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
-  // Common Tailwind classes for NavLink to apply active styling
   const getNavLinkClasses = ({ isActive }) =>
     `block px-3 py-2 rounded-md text-lg font-medium transition-colors duration-200 ` + // Changed text-base to text-lg
     `hover:bg-blue-100 dark:hover:bg-blue-800 ` +
-    `${isActive
-      ? 'text-blue-700 bg-blue-50 dark:text-blue-200 dark:bg-blue-900'
-      : 'text-gray-700 dark:text-gray-300'
+    `${
+      isActive
+        ? "text-blue-700 bg-blue-50 dark:text-blue-200 dark:bg-blue-900"
+        : "text-gray-700 dark:text-gray-300"
     }`;
 
-  // Classes for desktop navigation
   const getDesktopNavLinkClasses = ({ isActive }) =>
     `px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ` + // Changed text-sm to text-base
     `hover:text-blue-700 dark:hover:text-blue-200 ` +
-    `${isActive
-      ? 'text-blue-700 dark:text-blue-200 font-semibold'
-      : 'text-gray-700 dark:text-gray-300'
+    `${
+      isActive
+        ? "text-blue-700 dark:text-blue-200 font-semibold"
+        : "text-gray-700 dark:text-gray-300"
     }`;
-
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-md">
@@ -37,7 +43,10 @@ function Header() {
         <div className="flex justify-between items-center h-16">
           {/* Logo/Brand */}
           <div className="flex-shrink-0">
-            <NavLink to="/" className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <NavLink
+              to="/"
+              className="text-2xl font-bold text-blue-600 dark:text-blue-400"
+            >
               SmartDo
             </NavLink>
           </div>
@@ -50,12 +59,21 @@ function Header() {
             <NavLink to="/previous" className={getDesktopNavLinkClasses}>
               Previous Tasks
             </NavLink>
-            <NavLink to="/login" className="px-4 py-2 rounded-lg border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900">
+            {!status && <NavLink
+              to="/login"
+              className="px-4 py-2 rounded-lg border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
+            >
               Login
-            </NavLink>
+            </NavLink>}
+            {status && <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-lg border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
+            >
+              Logout
+            </button>}
           </nav>
 
-          {/* Mobile Menu Button (Hamburger Icon) */}
+          {/* Mobile Menu button (Hamburger Icon) */}
           <div className="-mr-2 flex md:hidden">
             <button
               onClick={toggleMobileMenu}
@@ -109,15 +127,32 @@ function Header() {
       {isMobileMenuOpen && (
         <div className="md:hidden" id="mobile-menu">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-            <NavLink to="/" className={getNavLinkClasses} onClick={toggleMobileMenu}>
+            <NavLink
+              to="/"
+              className={getNavLinkClasses}
+              onClick={toggleMobileMenu}
+            >
               Home
             </NavLink>
-            <NavLink to="/previous" className={getNavLinkClasses} onClick={toggleMobileMenu}>
+            <NavLink
+              to="/previous"
+              className={getNavLinkClasses}
+              onClick={toggleMobileMenu}
+            >
               Previous Tasks
             </NavLink>
-            <NavLink to="/login" className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-500 border border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900">
+            {!status && <NavLink
+              to="/login"
+              className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-500 border border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
+            >
               Login
-            </NavLink>
+            </NavLink>}
+            {status && <button
+              onClick={handleLogout}
+              className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-500 border border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
+            >
+              Logout
+            </button>}
           </div>
         </div>
       )}
