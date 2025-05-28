@@ -24,7 +24,6 @@ export default function Home({toggleLoading}) {
   const localStorageKey = auth.local_Storage.currentStorageKey;
 
   useEffect(() => {
-    // random placeholder
     const random = Math.floor(Math.random() * placeholders.length);
     setPlaceholder(placeholders[random]);
   }, []);
@@ -32,20 +31,13 @@ export default function Home({toggleLoading}) {
   const sendForTextCompletion =async (prompt) => {
     if (prompt) {
     toggleLoading()
-      await sreeApi(prompt).then((response) => {
-        
-        const tasks = parseChecklist(response)
-        
-        localStorage.setItem(localStorageKey, JSON.stringify(tasks));
+      await sreeApi(prompt).then((response) => {        
+        const tasks = parseChecklist(response)        
+        localStorage.setItem(localStorageKey, JSON.stringify({id: null, task_data: tasks}));
         navigate('/current');
         //toggleLoading()
-
-
-
       });
-
-      setPrompt(response);
-    
+      setPrompt("");    
     }
   }
 
