@@ -9,6 +9,7 @@ const fetchData = async () => {
           console.log("taskResponse", taskResponse.data);
           const taskData = taskResponse.data.taskData;
           if(taskData.length > 0) localStorage.setItem(auth.local_Storage.userTasksStorageKey, JSON.stringify(taskData));
+          return taskData;
       } catch (error) {
         console.error("api :: fetchUserTasks :: db :: ", error);
       }
