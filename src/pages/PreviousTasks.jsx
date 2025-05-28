@@ -3,6 +3,7 @@ import { ArrowUpRight, Trash2 } from "lucide-react";
 import auth from "../config/config";
 import { useNavigate } from "react-router-dom";
 import fetchData from "../api/fetchUserTasks";
+import deleteTask from "../api/deleteTask";
 export default function TaskList() {
   const [tasks, setTasks] = useState(JSON.parse(localStorage.getItem(auth.local_Storage.userTasksStorageKey)) || []);
   const [searchTerm, setSearchTerm] = useState("");
@@ -12,7 +13,7 @@ export default function TaskList() {
   useEffect(() => {
     async function fetch() {
       const temp = await fetchData()
-      setTasks(temp);
+      setTasks(temp || []);
     }
     fetch();
     
@@ -36,7 +37,10 @@ export default function TaskList() {
   }
 
   const deleteTaskfromDb= (id)=>{
-    console.log("delete button")
+    deleteTask(id);
+    const updatedTasks = tasks.filter((task) => task.id !== id);
+    setTasks(updatedTasks);
+    localStorage.setItem(auth.local_Storage.userTasksStorageKey, JSON.stringify(updatedTasks));
   }
 
   return (
@@ -69,8 +73,8 @@ export default function TaskList() {
               {task.task_heading}
             </h2>
             <div className="flex flex-row gap-4 justify-center items-center ml-4">
-              <ArrowUpRight className="text-green-500 w-8 h-8" onClick={()=>openTask(task.id)} />
-              <Trash2 className="text-red-500"  onClick={()=>deleteTaskfromDb(task.id)} />
+              <ArrowUpRight className="text-green-500 w-8 h-8 cursor-pointer" onClick={()=>openTask(task.id)} />
+              <Trash2 className="text-red-500 cursor-pointer"  onClick={()=>deleteTaskfromDb(task.id)} />
             </div>
             
           </div>

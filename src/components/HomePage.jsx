@@ -47,9 +47,8 @@ export default function Home({toggleLoading}) {
         Welcome to SmartDo 👋
       </h1>
       <p className="mb-8 text-gray-600 dark:text-gray-300">
-        What you want to do, and we'll generate a smart to-do list for you.
-        Describe what would you like help with today? Enter a task prompt, and
-        we’ll generate a to-do list just for you.
+        What you want to do! <br />
+        Describe what would you like help with today? And we'll generate a smart to-do list for you.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xl">
         <input
