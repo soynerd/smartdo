@@ -1,12 +1,66 @@
-# React + Vite
+# 📝 SmartDo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SmartDo is an intelligent, minimal, and customizable to-do list generator built with a modern tech stack. Just type a prompt like “Things to pack for a beach vacation” and let SmartDo generate a tailored checklist for you. You can edit, delete, and save tasks—all backed by authentication and personalization.
 
-Currently, two official plugins are available:
+![SmartDo Screenshot - Light and Dark Mode](https://your-screenshot-url-if-any.com)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🚀 Features
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- ✅ **Smart To-Do Generation** using [Sree](https://sree.shop/) as GPT provider
+- 🔐 **Authentication** via **Google** and **GitHub** using OAuth
+- ✏️ **Customizable Tasks** – add, edit, delete items
+- 💾 **Save To-Do Lists** to the cloud (via backend API)
+- 🌙 **Dark Mode** support
+- ⏳ **Sessions with 7-day expiry** for persistent login
+- 💡 **Minimal & Modern UI** – clean interface with intuitive UX
+
+---
+
+## 🧠 How It Works
+
+1. **Login** via Google or GitHub
+2. **Enter a prompt** (e.g., “Study plan for my biology semester”)
+3. SmartDo uses GPT (via `sree.shop`) to generate a checklist
+4. You can:
+   - ✔️ Check items
+   - ✏️ Edit tasks or sections
+   - ➕ Add your own sections/items
+   - 🗑️ Delete anything
+   - 💾 Save it for later
+5. Data is saved locally and optionally persisted to your backend
+
+---
+
+## ⚙️ Tech Stack
+
+| Area        | Tech |
+|-------------|------|
+| Frontend    | React, Tailwind CSS, Lucide Icons, React Router Dom |
+| Backend     | Node.js, Express |
+| Auth        | Passport.js with Google & GitHub strategies |
+| AI Provider | [Sree](https://sree.shop/) (OpenAI-compatible) |
+| Storage     | localStorage + custom API |
+| Sessions    | Express-session (7 days expiry) |
+
+---
+
+## 🔑 Authentication
+
+Authentication is handled via OAuth:
+
+- Google Login
+- GitHub Login
+
+Session cookies are used to maintain the user's login status for **7 days**, ensuring a smooth, persistent experience across visits.
+
+---
+
+## 🧪 Local Development
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/yourusername/smartdo.git
+cd smartdo
