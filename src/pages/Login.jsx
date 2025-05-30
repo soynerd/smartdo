@@ -1,12 +1,13 @@
 import React from 'react';
 import { FaGoogle, FaGithub } from 'react-icons/fa';
+import auth from '../config/config';
 
 const LoginPage = () => {
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:3000/auth/google";
+    window.location.href = auth.backend.api_url + "/auth/google";
   };
   const handleGitHubLogin = () => {
-    window.location.href = "http://localhost:3000/auth/github";
+    window.location.href = auth.backend.api_url +"/auth/github";
   };
 
   return (

@@ -1,8 +1,8 @@
 import axios from "axios";
-
+import auth from "../config/config";
 export default async function logout(){
     try{
-        await axios.post("http://localhost:3000/auth/logout", 
+        await axios.post(auth.backend.api_url + "/auth/logout", 
           {},
           {withCredentials: true,});
         localStorage.clear();

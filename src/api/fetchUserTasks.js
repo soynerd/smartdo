@@ -3,7 +3,7 @@ import auth from "../config/config";
 
 const fetchData = async () => {
       try {
-        const taskResponse = await axios.get("http://localhost:3000/data/taskData", {
+        const taskResponse = await axios.get(auth.backend.api_url + "/data/taskData", {
             withCredentials: true,
           });
           console.log("taskResponse", taskResponse.data);
