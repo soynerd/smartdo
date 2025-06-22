@@ -11,7 +11,7 @@ const aiGeneratedTask = async (prompt) => {
         "Authorization": `Bearer ${auth.sree.api_key}`,
       },
       data: {
-        model: "provider-4/gpt-4o", // Or another supported chat model
+        model: "provider-5/gpt-4o", // Or another supported chat model
         messages: [
           {
             role: "system",
