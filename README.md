@@ -8,7 +8,7 @@ SmartDo is an intelligent, minimal, and customizable to-do list generator built 
 
 ## 🚀 Features
 
-- ✅ **Smart To-Do Generation** using [Sree](https://sree.shop/) as GPT provider
+- ✅ **Smart To-Do Generation** using [Gemini](https://aistudio.google.com/) as GPT provider
 - 🔐 **Authentication** via **Google** and **GitHub** using OAuth
 - ✏️ **Customizable Tasks** – add, edit, delete items
 - 💾 **Save To-Do Lists** to the cloud (via backend API)
@@ -35,14 +35,14 @@ SmartDo is an intelligent, minimal, and customizable to-do list generator built 
 
 ## ⚙️ Tech Stack
 
-| Area        | Tech |
-|-------------|------|
-| Frontend    | React, Tailwind CSS, Lucide Icons, React Router Dom |
-| Backend     | Node.js, Express |
-| Auth        | Passport.js with Google & GitHub strategies |
-| AI Provider | [Sree](https://sree.shop/) (OpenAI-compatible) |
-| Storage     | localStorage + custom API |
-| Sessions    | Express-session (7 days expiry) |
+| Area        | Tech                                                      |
+| ----------- | --------------------------------------------------------- |
+| Frontend    | React, Tailwind CSS, Lucide Icons, React Router Dom       |
+| Backend     | Node.js, Express                                          |
+| Auth        | Passport.js with Google & GitHub strategies               |
+| AI Provider | [Gemini](https://aistudio.google.com/) (Gemma-compatible) |
+| Storage     | localStorage + custom API                                 |
+| Sessions    | Express-session (7 days expiry)                           |
 
 ---
 
@@ -57,10 +57,13 @@ Session cookies are used to maintain the user's login status for **7 days**, ens
 
 ---
 
-## 🧪 Local Development
+## 🧪 Web Development
+
+[Smart DO](https://smartdo.soynerd.co.in/)
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/smartdo.git
+git clone https://github.com/soynerd/smartdo.git
 cd smartdo
+```

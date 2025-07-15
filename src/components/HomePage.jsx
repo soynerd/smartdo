@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import {useNavigate} from 'react-router-dom'
-import sreeApi from "../api/sreeApi";
+import { useNavigate } from "react-router-dom";
+import generateTaskRespose from "../api/googleGeminiAPI";
 import auth from "../config/config";
 import parseChecklist from "../util/parseAiResopnse";
 const placeholders = [
@@ -16,7 +16,7 @@ const placeholders = [
   "Organizing a birthday party",
 ];
 
-export default function Home({toggleLoading}) {
+export default function Home({ toggleLoading }) {
   const [prompt, setPrompt] = useState("");
   const [placeholder, setPlaceholder] = useState("");
 
@@ -28,18 +28,21 @@ export default function Home({toggleLoading}) {
     setPlaceholder(placeholders[random]);
   }, []);
 
-  const sendForTextCompletion =async (prompt) => {
+  const sendForTextCompletion = async (prompt) => {
     if (prompt) {
-    toggleLoading()
-      await sreeApi(prompt).then((response) => {        
-        const tasks = parseChecklist(response)        
-        localStorage.setItem(localStorageKey, JSON.stringify({id: null, task_data: tasks}));
-        navigate('/current');
+      toggleLoading();
+      await generateTaskRespose(prompt).then((response) => {
+        const tasks = parseChecklist(response);
+        localStorage.setItem(
+          localStorageKey,
+          JSON.stringify({ id: null, task_data: tasks })
+        );
+        navigate("/current");
         //toggleLoading()
       });
-      setPrompt("");    
+      setPrompt("");
     }
-  }
+  };
 
   return (
     <main className="flex flex-col items-center justify-center px-4 py-20 text-center mt-20">
@@ -48,7 +51,8 @@ export default function Home({toggleLoading}) {
       </h1>
       <p className="mb-8 text-gray-600 dark:text-gray-300">
         What you want to do! <br />
-        Describe what would you like help with today? And we'll generate a smart to-do list for you.
+        Describe what would you like help with today? And we'll generate a smart
+        to-do list for you.
       </p>
       <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xl">
         <input
@@ -59,7 +63,10 @@ export default function Home({toggleLoading}) {
           className="flex-1 p-4 border border-gray-300 dark:border-gray-700 rounded-lg outline-none dark:bg-gray-800 dark:text-white text-black"
           onKeyDown={(e) => e.key === "Enter" && sendForTextCompletion(prompt)}
         />
-        <button className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition" onClick={() => sendForTextCompletion(prompt)}>
+        <button
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+          onClick={() => sendForTextCompletion(prompt)}
+        >
           Send
         </button>
       </div>
