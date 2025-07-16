@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Trash2, Plus, X, HardDriveUpload, PencilLine } from "lucide-react";
+import { Trash2, Plus, X, PencilLine, Save } from "lucide-react";
 import auth from "../config/config";
 import saveTaskToDb from "../api/saveTask";
 const LOCAL_STORAGE_KEY = auth.local_Storage.currentStorageKey;
@@ -15,6 +15,7 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
     itemIndex: null,
   }); // <-- added
   const [editingTitle, setEditingTitle] = useState(null); // <-- added
+  const [loadingMessage, setLoadingMessage] = useState(true);
 
   useEffect(() => {
     if (selfTask) setTasks([{ title: "New Tasks", items: [] }]);
@@ -29,6 +30,10 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
       if (stored) setTasks(JSON.parse(stored).task_data);
       console.log(JSON.parse(stored).task_data);
     }
+
+    setTimeout(() => {
+      setLoadingMessage(false);
+    }, 3000);
   }, [data, selfTask]);
 
   const saveTasks = (updatedTasks) => {
@@ -96,6 +101,11 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
 
   return (
     <div className="max-w-3xl mx-auto p-4">
+      {loadingMessage === true && (
+        <div className="fixed top-4 right-1/9 md:right-4 bg-green-600 text-white px-2 md:px-4 py-2 rounded shadow-lg z-50 opacity-70 text-sm ">
+          Double Click on Heading to Edit!
+        </div>
+      )}
       {isSaved === "success" && (
         <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg z-50">
           Saved successfully!
@@ -152,7 +162,7 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
               ) : (
                 <h3
                   className={`font-semibold text-secondary dark:text-white cursor-pointer ${
-                    sectionIndex === 0 ? "text-3xl" : "text-xl"
+                    sectionIndex === 0 ? "text-2xl md:text-3xl" : "text-xl"
                   }`}
                   onDoubleClick={() => setEditingTitle(sectionIndex)}
                   title="Double-click to edit section title"
@@ -175,9 +185,9 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
               {sectionIndex === 0 && (
                 <button
                   onClick={() => handleSave(tasks)}
-                  className="shadow-lg rounded-4xl flex items-center justify-center group relative transition-all duration-200 ease-in-out cursor-pointer"
+                  className="shadow-lg rounded-2xl p-0.5 flex items-center justify-center group relative transition-all duration-200 ease-in-out cursor-pointer"
                 >
-                  <HardDriveUpload className="w-10 h-10 text-green-400" />
+                  <Save className="w-8 h-8 md:w-10 md:h-10 text-green-400" />
                   <span className="absolute bottom-full mb-2 px-3 py-1 bg-gray-700 text-white text-sm rounded-md opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out ">
                     Upload
                   </span>

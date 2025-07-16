@@ -144,6 +144,13 @@ function Header() {
               Home
             </NavLink>
             <NavLink
+              to="/manual"
+              className={getNavLinkClasses}
+              onClick={toggleMobileMenu}
+            >
+              Plan My Do
+            </NavLink>
+            <NavLink
               to="/previous"
               className={getNavLinkClasses}
               onClick={toggleMobileMenu}
