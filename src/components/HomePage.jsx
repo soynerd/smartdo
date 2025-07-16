@@ -71,7 +71,7 @@ export default function Home({ toggleLoading }) {
           localStorageKey,
           JSON.stringify({ id: null, task_data: tasks })
         );
-        navigate("/current");
+        navigate("/ai");
         //toggleLoading()
       });
       setPrompt("");

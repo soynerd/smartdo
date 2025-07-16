@@ -8,15 +8,14 @@ function Header() {
   const [status, setStatus] = useState(false);
 
   const navigate = useNavigate();
- useEffect(()=>{
-  authStatus().then(setStatus);
-  
- }, [status])
+  useEffect(() => {
+    authStatus().then(setStatus);
+  }, [status]);
 
- const handleLogout = () =>{
-  logout().then(setStatus(false));
-  navigate("/")
- }
+  const handleLogout = () => {
+    logout().then(setStatus(false));
+    navigate("/");
+  };
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -59,21 +58,28 @@ function Header() {
             <NavLink to="/" className={getDesktopNavLinkClasses}>
               Home
             </NavLink>
+            <NavLink to="/manual" className={getDesktopNavLinkClasses}>
+              Plan My Do
+            </NavLink>
             <NavLink to="/previous" className={getDesktopNavLinkClasses}>
               Previous Tasks
             </NavLink>
-            {!status && <NavLink
-              to="/login"
-              className="px-4 py-2 rounded-lg border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
-            >
-              Login
-            </NavLink>}
-            {status && <button
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-lg border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
-            >
-              Logout
-            </button>}
+            {!status && (
+              <NavLink
+                to="/login"
+                className="px-4 py-2 rounded-lg border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
+              >
+                Login
+              </NavLink>
+            )}
+            {status && (
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-lg border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
+              >
+                Logout
+              </button>
+            )}
           </nav>
 
           {/* Mobile Menu button (Hamburger Icon) */}
@@ -144,18 +150,22 @@ function Header() {
             >
               Previous Tasks
             </NavLink>
-            {!status && <NavLink
-              to="/login"
-              className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-500 border border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
-            >
-              Login
-            </NavLink>}
-            {status && <button
-              onClick={handleLogout}
-              className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-500 border border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
-            >
-              Logout
-            </button>}
+            {!status && (
+              <NavLink
+                to="/login"
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-500 border border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
+              >
+                Login
+              </NavLink>
+            )}
+            {status && (
+              <button
+                onClick={handleLogout}
+                className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-blue-500 border border-blue-500 hover:bg-blue-500 hover:text-white transition-all duration-200 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900"
+              >
+                Logout
+              </button>
+            )}
           </div>
         </div>
       )}

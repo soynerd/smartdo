@@ -1,6 +1,7 @@
 import Home from "./Home";
-import Login from "./Login"
+import Login from "./Login";
 import PreviousTask from "./PreviousTasks";
-import CurrentTask from "./CurrentTask";
+import AiTask from "./CurrentTask";
+import ManualTask from "./ManualTask";
 
-export {Home, Login, PreviousTask, CurrentTask}
+export { Home, Login, PreviousTask, AiTask, ManualTask };
