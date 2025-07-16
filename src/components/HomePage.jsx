@@ -98,7 +98,7 @@ export default function Home({ toggleLoading }) {
           Tip for better response
         </button>
         <br />
-        <p className="text-gray-600 dark:text-gray-300 text-lg">{tip}</p>
+        <span className="text-gray-600 dark:text-gray-300 text-lg">{tip}</span>
       </p>
       <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xl">
         <input
