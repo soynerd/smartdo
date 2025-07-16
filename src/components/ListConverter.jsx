@@ -33,10 +33,11 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
 
   const saveTasks = (updatedTasks) => {
     setTasks(updatedTasks);
-    localStorage.setItem(
-      LOCAL_STORAGE_KEY,
-      JSON.stringify({ id: null, task_data: updatedTasks })
-    );
+    !selfTask &&
+      localStorage.setItem(
+        LOCAL_STORAGE_KEY,
+        JSON.stringify({ id: null, task_data: updatedTasks })
+      );
   };
 
   const handleToggle = (sectionIndex, itemIndex) => {
@@ -144,7 +145,9 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
                     setEditingTitle(null);
                   }}
                   onKeyDown={(e) => e.key === "Enter" && setEditingTitle(null)}
-                  className="text-xl md:text-2xl font-semibold text-secondary dark:text-white bg-transparent focus:outline-none border-b border-primary"
+                  className={`text-xl font-semibold text-secondary dark:text-white bg-transparent focus:outline-none border-b border-primary w-10/12 ${
+                    sectionIndex === 0 ? "md:text-3xl" : ""
+                  }`}
                 />
               ) : (
                 <h3
