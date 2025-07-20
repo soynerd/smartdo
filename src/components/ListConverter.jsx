@@ -1,81 +1,180 @@
 import React, { useEffect, useState } from "react";
-import { Trash2, Plus, X, PencilLine, Save } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  X,
+  PencilLine,
+  Save,
+  GripVertical,
+  LoaderCircle,
+} from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import auth from "../config/config";
 import saveTaskToDb from "../api/saveTask";
+
 const LOCAL_STORAGE_KEY = auth.local_Storage.currentStorageKey;
+
+// A small helper to ensure tasks have a unique ID for keys if they don't already
+const ensureIds = (taskData) =>
+  taskData.map((section, index) => ({
+    ...section,
+    id: section.id || `section-${Date.now()}-${index}`,
+    items: section.items.map((item, itemIndex) => ({
+      ...item,
+      id: item.id || `item-${Date.now()}-${index}-${itemIndex}`,
+    })),
+  }));
 
 const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
   const [tasks, setTasks] = useState([]);
-  const [heading, setHeading] = useState("");
   const [search, setSearch] = useState("");
   const [newSectionTitle, setNewSectionTitle] = useState("");
   const [isSaved, setIsSaved] = useState(null);
+  const [isSaving, setIsSaving] = useState(false); // *** UX Improvement: Loading state for save button
   const [editingTask, setEditingTask] = useState({
-    sectionIndex: null,
-    itemIndex: null,
-  }); // <-- added
-  const [editingTitle, setEditingTitle] = useState(null); // <-- added
-  const [loadingMessage, setLoadingMessage] = useState(true);
+    sectionId: null,
+    itemId: null,
+  });
+  const [editingTitle, setEditingTitle] = useState(null); // sectionId
 
   useEffect(() => {
-    if (selfTask) setTasks([{ title: "New Tasks", items: [] }]);
+    if (selfTask) setTasks(ensureIds([{ title: "New Tasks", items: [] }]));
     else if (data?.length) {
-      setTasks(data);
+      const tasksWithIds = ensureIds(data);
+      setTasks(tasksWithIds);
       localStorage.setItem(
         LOCAL_STORAGE_KEY,
-        JSON.stringify({ id: null, task_data: data })
+        JSON.stringify({ id: null, task_data: tasksWithIds })
       );
     } else {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) setTasks(JSON.parse(stored).task_data);
-      console.log(JSON.parse(stored).task_data);
+      if (stored) {
+        const storedTasks = JSON.parse(stored).task_data || [];
+        setTasks(ensureIds(storedTasks));
+      }
     }
-
-    setTimeout(() => {
-      setLoadingMessage(false);
-    }, 3000);
   }, [data, selfTask]);
 
   const saveTasks = (updatedTasks) => {
     setTasks(updatedTasks);
-    !selfTask &&
+    if (!selfTask) {
       localStorage.setItem(
         LOCAL_STORAGE_KEY,
         JSON.stringify({ id: null, task_data: updatedTasks })
       );
+    }
   };
 
-  const handleToggle = (sectionIndex, itemIndex) => {
-    const updated = [...tasks];
-    updated[sectionIndex].items[itemIndex].checked =
-      !updated[sectionIndex].items[itemIndex].checked;
+  const onDragEnd = (result) => {
+    const { source, destination, type } = result;
+    if (
+      !destination ||
+      (destination.droppableId === source.droppableId &&
+        destination.index === source.index)
+    ) {
+      return;
+    }
+
+    let updatedTasks = Array.from(tasks);
+
+    if (type === "section") {
+      const [reorderedSection] = updatedTasks.splice(source.index, 1);
+      updatedTasks.splice(destination.index, 0, reorderedSection);
+    } else {
+      const sourceSection = updatedTasks.find(
+        (t) => t.id === source.droppableId
+      );
+      const destSection = updatedTasks.find(
+        (t) => t.id === destination.droppableId
+      );
+      const [movedItem] = sourceSection.items.splice(source.index, 1);
+      destSection.items.splice(destination.index, 0, movedItem);
+    }
+    saveTasks(updatedTasks);
+  };
+
+  const handleToggle = (sectionId, itemId) => {
+    const updated = tasks.map((section) => {
+      if (section.id === sectionId) {
+        return {
+          ...section,
+          items: section.items.map((item) =>
+            item.id === itemId ? { ...item, checked: !item.checked } : item
+          ),
+        };
+      }
+      return section;
+    });
     saveTasks(updated);
   };
 
-  const handleDeleteItem = (sectionIndex, itemIndex) => {
-    const updated = [...tasks];
-    updated[sectionIndex].items.splice(itemIndex, 1);
+  const handleDeleteItem = (sectionId, itemId) => {
+    const updated = tasks.map((section) => {
+      if (section.id === sectionId) {
+        return {
+          ...section,
+          items: section.items.filter((item) => item.id !== itemId),
+        };
+      }
+      return section;
+    });
     saveTasks(updated);
   };
 
-  const handleDeleteSection = (sectionIndex) => {
-    const updated = [...tasks];
-    updated.splice(sectionIndex, 1);
-    saveTasks(updated);
+  const handleDeleteSection = (sectionId) => {
+    // *** UX Improvement: Confirmation before deleting a whole section ***
+    if (
+      window.confirm("Are you sure you want to delete this entire section?")
+    ) {
+      const updated = tasks.filter((section) => section.id !== sectionId);
+      saveTasks(updated);
+    }
   };
 
-  const handleAddItem = (sectionIndex, label) => {
+  const handleAddItem = (sectionId, label) => {
     if (!label.trim()) return;
-    const updated = [...tasks];
-    updated[sectionIndex].items.push({ label: label.trim(), checked: false });
+    const updated = tasks.map((section) => {
+      if (section.id === sectionId) {
+        const newItem = {
+          id: `item-${Date.now()}`,
+          label: label.trim(),
+          checked: false,
+        };
+        return { ...section, items: [...section.items, newItem] };
+      }
+      return section;
+    });
     saveTasks(updated);
   };
 
   const handleAddSection = () => {
     if (!newSectionTitle.trim()) return;
-    const updated = [...tasks, { title: newSectionTitle.trim(), items: [] }];
+    const newSection = {
+      id: `section-${Date.now()}`,
+      title: newSectionTitle.trim(),
+      items: [],
+    };
+    saveTasks([...tasks, newSection]);
     setNewSectionTitle("");
-    saveTasks(updated);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    // Clean tasks from internal IDs before saving
+    const cleanTasks = tasks.map(({ id, ...section }) => ({
+      ...section,
+      items: section.items.map(({ id, ...item }) => item),
+    }));
+
+    const res = await saveTaskToDb(cleanTasks);
+    setIsSaving(false);
+
+    if (res === true) {
+      setIsSaved("success");
+    } else {
+      setIsSaved("error");
+    }
+    setTimeout(() => setIsSaved(null), 3000);
   };
 
   const filteredTasks = tasks
@@ -85,35 +184,23 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
         item.label.toLowerCase().includes(search.toLowerCase())
       ),
     }))
-    .filter((section, idx) =>
-      idx === 0 || search.trim() ? section.items.length > 0 || idx === 0 : true
+    .filter(
+      (section) =>
+        search.trim() === "" ||
+        section.items.length > 0 ||
+        tasks.findIndex((t) => t.id === section.id) === 0
     );
 
-  const handleSave = async (tasks) => {
-    const res = await saveTaskToDb(tasks);
-    if (res === true) {
-      setIsSaved("success");
-    } else {
-      setIsSaved("error");
-    }
-    setTimeout(() => setIsSaved(null), 3000);
-  };
-
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      {loadingMessage === true && (
-        <div className="fixed top-4 right-1/9 md:right-4 bg-green-600 text-white px-2 md:px-4 py-2 rounded shadow-lg z-50 opacity-70 text-sm ">
-          Double Click on Heading to Edit!
-        </div>
-      )}
+    <div className="max-w-3xl mx-auto p-4 font-sans">
+      {/* --- Notifications --- */}
       {isSaved === "success" && (
-        <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg z-50">
+        <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in-down">
           Saved successfully!
         </div>
       )}
-
       {isSaved === "error" && (
-        <div className="fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow-lg z-50">
+        <div className="fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in-down">
           Server error. Try again!
         </div>
       )}
@@ -121,7 +208,6 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
       <h2 className="text-3xl font-bold mb-6 text-center text-primary dark:text-white">
         📝 {mainTitle || "Smart Checklist"}
       </h2>
-
       <input
         type="text"
         placeholder="Search tasks..."
@@ -130,166 +216,190 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {filteredTasks.length === 0 ? (
-        <div className="text-center text-gray-500 dark:text-gray-400">
-          No tasks found.
-        </div>
-      ) : (
-        filteredTasks.map((section, sectionIndex) => (
-          <div
-            key={sectionIndex}
-            className="mb-8 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-300"
-          >
-            <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
-              {editingTitle === sectionIndex ? (
-                <input
-                  value={section.title}
-                  autoFocus
-                  onChange={(e) => {
-                    const updated = [...tasks];
-                    updated[sectionIndex].title = e.target.value;
-                    setTasks(updated);
-                  }}
-                  onBlur={() => {
-                    saveTasks(tasks);
-                    setEditingTitle(null);
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && setEditingTitle(null)}
-                  className={`text-xl font-semibold text-secondary dark:text-white bg-transparent focus:outline-none border-b border-primary w-10/12 ${
-                    sectionIndex === 0 ? "md:text-3xl" : ""
-                  }`}
-                />
-              ) : (
-                <h3
-                  className={`font-semibold text-secondary dark:text-white cursor-pointer ${
-                    sectionIndex === 0 ? "text-2xl md:text-3xl" : "text-xl"
-                  }`}
-                  onDoubleClick={() => setEditingTitle(sectionIndex)}
-                  title="Double-click to edit section title"
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable
+          droppableId="all-sections"
+          direction="vertical"
+          type="section"
+        >
+          {(provided) => (
+            <div
+              {...provided.droppableProps}
+              ref={provided.innerRef}
+              className="space-y-6"
+            >
+              {filteredTasks.map((section, index) => (
+                <Draggable
+                  key={section.id}
+                  draggableId={section.id}
+                  index={index}
+                  isDragDisabled={index === 0}
                 >
-                  {section.title}
-                </h3>
-              )}
-              {sectionIndex === 0 &&
-                heading !== section.title &&
-                setHeading(section.title)}
-              {sectionIndex !== 0 && (
-                <button
-                  onClick={() => handleDeleteSection(sectionIndex)}
-                  title="Delete section"
-                  className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
-                >
-                  <X size={20} />
-                </button>
-              )}
-              {sectionIndex === 0 && (
-                <button
-                  onClick={() => handleSave(tasks)}
-                  className="shadow-lg rounded-2xl p-0.5 flex items-center justify-center group relative transition-all duration-200 ease-in-out cursor-pointer"
-                >
-                  <Save className="w-8 h-8 md:w-10 md:h-10 text-green-400" />
-                  <span className="absolute bottom-full mb-2 px-3 py-1 bg-gray-700 text-white text-sm rounded-md opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out ">
-                    Upload
-                  </span>
-                </button>
-              )}
-            </div>
-
-            <ul className="p-4 space-y-3">
-              {section.items.map((item, itemIndex) => (
-                <li
-                  key={itemIndex}
-                  className="flex justify-between items-center group"
-                >
-                  <label className="flex items-start gap-3 w-full text-gray-800 dark:text-white">
-                    <input
-                      type="checkbox"
-                      checked={item.checked}
-                      onChange={() => handleToggle(sectionIndex, itemIndex)}
-                      className="mt-1 w-5 h-5"
-                    />
-                    <div className="flex-1 min-w-0 flex items-center justify-between">
-                      {editingTask.sectionIndex === sectionIndex &&
-                      editingTask.itemIndex === itemIndex ? (
-                        <input
-                          type="text"
-                          value={item.label}
-                          autoFocus
-                          onChange={(e) => {
-                            const updated = [...tasks];
-                            updated[sectionIndex].items[itemIndex].label =
-                              e.target.value;
-                            setTasks(updated);
-                          }}
-                          onBlur={() => {
-                            saveTasks(tasks);
-                            setEditingTask({
-                              sectionIndex: null,
-                              itemIndex: null,
-                            });
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") e.target.blur();
-                          }}
-                          className="w-full block bg-transparent border-b border-primary text-sm focus:outline-none"
-                        />
-                      ) : (
-                        <span
-                          className={`w-full block break-words ${
-                            item.checked
-                              ? "line-through text-gray-400 dark:text-gray-500"
-                              : ""
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      // *** UX Improvement: Visual feedback while dragging ***
+                      className={`rounded-xl border transition-shadow duration-300 ${
+                        snapshot.isDragging ? "shadow-2xl" : "shadow-md"
+                      } ${
+                        index === 0
+                          ? "border-transparent"
+                          : "border-gray-200 dark:border-gray-700"
+                      } bg-white dark:bg-gray-800`}
+                    >
+                      <div
+                        className={`flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700`}
+                      >
+                        {index !== 0 && (
+                          <div
+                            {...provided.dragHandleProps}
+                            title="Drag to reorder section"
+                            className="cursor-grab text-gray-400 hover:text-primary pr-2"
+                          >
+                            <GripVertical size={20} />
+                          </div>
+                        )}
+                        <h3
+                          className={`w-full font-semibold text-secondary dark:text-white ${
+                            index === 0 ? "text-2xl md:text-3xl" : "text-xl"
                           }`}
                         >
-                          {item.label}
-                        </span>
-                      )}
+                          {section.title}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          {index !== 0 && (
+                            <button
+                              onClick={() => handleDeleteSection(section.id)}
+                              title="Delete section"
+                              className="text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"
+                            >
+                              <X size={20} />
+                            </button>
+                          )}
+                          {index === 0 && (
+                            <button
+                              onClick={handleSave}
+                              disabled={isSaving}
+                              className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:bg-gray-400 transition-colors"
+                            >
+                              {isSaving ? (
+                                <>
+                                  {" "}
+                                  <LoaderCircle
+                                    size={18}
+                                    className="animate-spin"
+                                  />{" "}
+                                  Saving...{" "}
+                                </>
+                              ) : (
+                                <>
+                                  {" "}
+                                  <Save size={18} /> Save{" "}
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <Droppable droppableId={section.id} type="item">
+                        {(provided) => (
+                          <ul
+                            ref={provided.innerRef}
+                            {...provided.droppableProps}
+                            className="p-4 space-y-3"
+                          >
+                            {section.items.length === 0 && (
+                              <p className="text-center text-sm text-gray-400 dark:text-gray-500 py-2">
+                                No tasks here. Add one below!
+                              </p>
+                            )}
+                            {section.items.map((item, itemIndex) => (
+                              <Draggable
+                                key={item.id}
+                                draggableId={item.id}
+                                index={itemIndex}
+                              >
+                                {(provided, snapshot) => (
+                                  <li
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    className={`flex items-center group p-2 rounded-lg transition-all duration-300 ${
+                                      snapshot.isDragging
+                                        ? "shadow-lg bg-blue-50 dark:bg-blue-900/50"
+                                        : "bg-slate-50 dark:bg-gray-700"
+                                    }`}
+                                  >
+                                    <div
+                                      {...provided.dragHandleProps}
+                                      title="Drag to reorder item"
+                                      className="cursor-grab text-gray-400 hover:text-primary p-1 mr-1"
+                                    >
+                                      <GripVertical size={20} />
+                                    </div>
+                                    <label className="flex-grow flex items-center gap-3 text-gray-800 dark:text-white">
+                                      <input
+                                        type="checkbox"
+                                        checked={item.checked}
+                                        onChange={() =>
+                                          handleToggle(section.id, item.id)
+                                        }
+                                        className="w-5 h-5 rounded-sm"
+                                      />
+                                      <span
+                                        className={`flex-grow ${
+                                          item.checked
+                                            ? "line-through text-gray-400 dark:text-gray-500"
+                                            : ""
+                                        }`}
+                                      >
+                                        {item.label}
+                                      </span>
+                                    </label>
+                                    <div className="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={() =>
+                                          handleDeleteItem(section.id, item.id)
+                                        }
+                                        className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"
+                                        title="Delete item"
+                                      >
+                                        <Trash2 size={18} />
+                                      </button>
+                                    </div>
+                                  </li>
+                                )}
+                              </Draggable>
+                            ))}
+                            {provided.placeholder}
+                            <AddItemInput
+                              onAdd={(label) =>
+                                handleAddItem(section.id, label)
+                              }
+                            />
+                          </ul>
+                        )}
+                      </Droppable>
                     </div>
-                  </label>
-
-                  <div className="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-                    {editingTask.sectionIndex !== sectionIndex ||
-                    editingTask.itemIndex !== itemIndex ? (
-                      <button
-                        onClick={() =>
-                          setEditingTask({ sectionIndex, itemIndex })
-                        }
-                        title="Edit task"
-                        className="text-blue-500 hover:text-blue-700 dark:hover:text-blue-400"
-                      >
-                        <PencilLine size={22} />
-                      </button>
-                    ) : null}
-
-                    <button
-                      onClick={() => handleDeleteItem(sectionIndex, itemIndex)}
-                      className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
-                      title="Delete item"
-                    >
-                      <Trash2 size={22} />
-                    </button>
-                  </div>
-                </li>
+                  )}
+                </Draggable>
               ))}
-              {sectionIndex !== 0 && (
-                <AddItemInput
-                  onAdd={(label) => handleAddItem(sectionIndex, label)}
-                />
-              )}
-            </ul>
-          </div>
-        ))
-      )}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
 
-      <div className="mt-8">
+      {/* --- Add New Section Form --- */}
+      <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
         <h4 className="text-lg font-medium mb-2 text-gray-800 dark:text-white">
           ➕ Add New Section
         </h4>
         <div className="flex gap-2">
           <input
             type="text"
-            className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none"
-            placeholder="Section title..."
+            className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="New section title..."
             value={newSectionTitle}
             onChange={(e) => setNewSectionTitle(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddSection()}
@@ -306,32 +416,65 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
   );
 };
 
+// *** UX Improvement: Cleaner "Add Item" flow ***
 const AddItemInput = ({ onAdd }) => {
+  const [isAdding, setIsAdding] = useState(false);
   const [text, setText] = useState("");
+  const inputRef = React.useRef(null);
 
-  const handleSubmit = () => {
-    if (!text.trim()) return;
+  useEffect(() => {
+    if (isAdding) {
+      inputRef.current?.focus();
+    }
+  }, [isAdding]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!text.trim()) {
+      setIsAdding(false);
+      return;
+    }
     onAdd(text);
     setText("");
+    // Optional: keep input open to add more items quickly
+    // setIsAdding(false);
   };
 
+  if (!isAdding) {
+    return (
+      <button
+        onClick={() => setIsAdding(true)}
+        className="flex items-center gap-2 w-full text-left text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 p-2 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/50 transition-colors"
+      >
+        <Plus size={16} /> Add item
+      </button>
+    );
+  }
+
   return (
-    <div className="flex gap-2 mt-4">
+    <form onSubmit={handleSubmit} className="flex gap-2 mt-2">
       <input
+        ref={inputRef}
         type="text"
-        placeholder="Add new item..."
-        className="flex-1 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white focus:outline-none"
+        placeholder="What needs to be done?"
+        className="flex-1 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+        onBlur={() => setIsAdding(false)} // Hide input if it loses focus
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setIsAdding(false);
+            setText("");
+          }
+        }}
       />
       <button
-        onClick={handleSubmit}
+        type="submit"
         className="bg-green-500 text-white px-3 py-2 rounded-md hover:bg-green-600"
       >
-        <Plus size={16} />
+        Add
       </button>
-    </div>
+    </form>
   );
 };
 
