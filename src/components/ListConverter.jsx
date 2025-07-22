@@ -3,7 +3,6 @@ import {
   Trash2,
   Plus,
   X,
-  PencilLine,
   Save,
   GripVertical,
   LoaderCircle,
@@ -13,8 +12,6 @@ import auth from "../config/config";
 import saveTaskToDb from "../api/saveTask";
 
 const LOCAL_STORAGE_KEY = auth.local_Storage.currentStorageKey;
-
-// A small helper to ensure tasks have a unique ID for keys if they don't already
 const ensureIds = (taskData) =>
   taskData.map((section, index) => ({
     ...section,
@@ -30,12 +27,8 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
   const [search, setSearch] = useState("");
   const [newSectionTitle, setNewSectionTitle] = useState("");
   const [isSaved, setIsSaved] = useState(null);
-  const [isSaving, setIsSaving] = useState(false); // *** UX Improvement: Loading state for save button
-  const [editingTask, setEditingTask] = useState({
-    sectionId: null,
-    itemId: null,
-  });
-  const [editingTitle, setEditingTitle] = useState(null); // sectionId
+  const [isSaving, setIsSaving] = useState(false);
+  const [dbTaskId, setDbTaskId] = useState(null);
 
   useEffect(() => {
     if (selfTask) setTasks(ensureIds([{ title: "New Tasks", items: [] }]));
@@ -50,6 +43,7 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
         const storedTasks = JSON.parse(stored).task_data || [];
+        setDbTaskId(JSON.parse(stored).id || null);
         setTasks(ensureIds(storedTasks));
       }
     }
@@ -122,7 +116,6 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
   };
 
   const handleDeleteSection = (sectionId) => {
-    // *** UX Improvement: Confirmation before deleting a whole section ***
     if (
       window.confirm("Are you sure you want to delete this entire section?")
     ) {
@@ -160,13 +153,18 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Clean tasks from internal IDs before saving
     const cleanTasks = tasks.map(({ id, ...section }) => ({
       ...section,
       items: section.items.map(({ id, ...item }) => item),
     }));
 
-    const res = await saveTaskToDb(cleanTasks);
+    const res = await saveTaskToDb([
+      {
+        id: dbTaskId,
+        title: cleanTasks[0].title,
+        task_data: cleanTasks,
+      },
+    ]);
     setIsSaving(false);
 
     if (res === true) {
@@ -239,7 +237,6 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
-                      // *** UX Improvement: Visual feedback while dragging ***
                       className={`rounded-xl border transition-shadow duration-300 ${
                         snapshot.isDragging ? "shadow-2xl" : "shadow-md"
                       } ${
@@ -416,7 +413,6 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
   );
 };
 
-// *** UX Improvement: Cleaner "Add Item" flow ***
 const AddItemInput = ({ onAdd }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [text, setText] = useState("");
@@ -436,8 +432,6 @@ const AddItemInput = ({ onAdd }) => {
     }
     onAdd(text);
     setText("");
-    // Optional: keep input open to add more items quickly
-    // setIsAdding(false);
   };
 
   if (!isAdding) {
@@ -460,7 +454,7 @@ const AddItemInput = ({ onAdd }) => {
         className="flex-1 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onBlur={() => setIsAdding(false)} // Hide input if it loses focus
+        onBlur={() => setIsAdding(false)}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
             setIsAdding(false);
