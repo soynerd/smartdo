@@ -1,27 +1,18 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { LoaderCircle, Lightbulb, Send } from "lucide-react"; // Added icons
+import { LoaderCircle, Lightbulb, Send, CheckSquare } from "lucide-react"; // Added CheckSquare icon
 import generateTaskRespose from "../api/googleGeminiAPI";
 import auth from "../config/config";
 import parseChecklist from "../util/parseAiResopnse";
 
-// A shorter, punchier list for the animated placeholder
 const placeholders = [
   "Plan a trip to Goa...",
   "Prepare for a hackathon...",
   "Host a weekend dinner party...",
   "Learn how to code in 30 days...",
   "Organize my home office...",
-  "How to prepare for a hackathon?",
-  "Weekend party – grocery checklist",
-  "I'm moving to a new flat",
-  "What to take on a bike road trip?",
-  "How to prepare for semester exams?",
-  "Planning a camping trip",
-  "What to pack for a winter vacation?",
 ];
 
-// Great examples to showcase power
 const examplePrompts = [
   "Plan a wedding",
   "Beginner gym workout",
@@ -37,14 +28,13 @@ const tips = [
 
 export default function HomePage({ toggleLoading }) {
   const [prompt, setPrompt] = useState("");
-  const [isLoading, setIsLoading] = useState(false); // --- UX Improvement: Local loading state
+  const [isLoading, setIsLoading] = useState(false);
   const [currentPlaceholder, setCurrentPlaceholder] = useState("");
   const [tip, setTip] = useState("");
 
   const navigate = useNavigate();
   const localStorageKey = auth.local_Storage.currentStorageKey;
 
-  // --- UX Improvement: Animated typing placeholder effect ---
   useEffect(() => {
     let placeholderIndex = 0;
     let letterIndex = 0;
@@ -55,10 +45,9 @@ export default function HomePage({ toggleLoading }) {
       setCurrentPlaceholder(currentText.substring(0, letterIndex + 1));
       letterIndex++;
       if (letterIndex > currentText.length) {
-        // Pause at the end before switching to next placeholder
         letterIndex = 0;
         placeholderIndex = (placeholderIndex + 1) % placeholders.length;
-        timeoutId = setTimeout(typePlaceholder, 2000);
+        timeoutId = setTimeout(typePlaceholder, 2000); // Pause before next placeholder
       } else {
         timeoutId = setTimeout(typePlaceholder, 50); // Typing speed
       }
@@ -70,8 +59,7 @@ export default function HomePage({ toggleLoading }) {
 
   const sendForTextCompletion = async (text) => {
     if (!text || isLoading) return;
-
-    setIsLoading(true); // 1. Set local loading state immediately
+    toggleLoading(); // This now controls a global loading state, which is great
 
     try {
       const response = await generateTaskRespose(text);
@@ -80,19 +68,15 @@ export default function HomePage({ toggleLoading }) {
         localStorageKey,
         JSON.stringify({ id: null, task_data: tasks })
       );
-
-      toggleLoading(); // 2. Trigger the full-screen loader *just before* navigating
-      setTimeout(() => navigate("/ai"), 100); // Give it a moment for the screen to transition
+      navigate("/ai"); // Navigate immediately, the loading state will be handled on the next page
     } catch (error) {
       console.error("Failed to generate task:", error);
-      setIsLoading(false); // Make sure to turn off loading on error
+      toggleLoading(); // Turn off loading on error
     }
   };
 
   const handleExampleClick = (example) => {
     setPrompt(example);
-    // You could optionally auto-send when an example is clicked
-    // sendForTextCompletion(example);
   };
 
   const showTip = () => {
@@ -101,9 +85,16 @@ export default function HomePage({ toggleLoading }) {
   };
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen px-4 py-10 text-center animate-fade-in">
+    // --- KEY CHANGE: Improved layout for mobile screens ---
+    // min-h-[calc(100vh-4rem)] accounts for the header height (h-16 is 4rem)
+    // justify-start on mobile, md:justify-center on larger screens
+    <main className="flex flex-col items-center justify-start md:justify-center min-h-[calc(100vh-4rem)] px-4 py-8 sm:py-12 text-center animate-fade-in">
       <div className="w-full max-w-2xl">
-        {/* --- UX Improvement: Clear, benefit-oriented copywriting --- */}
+        {/* --- UI Improvement: Added a visual anchor icon --- */}
+        <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center rounded-3xl shadow-sm">
+          <CheckSquare className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+        </div>
+
         <h1 className="text-4xl md:text-6xl font-bold mb-4 text-gray-800 dark:text-white">
           Turn Any Goal Into a Plan
         </h1>
@@ -119,14 +110,15 @@ export default function HomePage({ toggleLoading }) {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder={currentPlaceholder}
-              className="w-full p-4 pr-24 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm outline-none dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
+              className="w-full p-4 pr-28 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm outline-none dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-blue-500 transition-all"
               onKeyDown={(e) =>
                 e.key === "Enter" && sendForTextCompletion(prompt)
               }
               disabled={isLoading}
             />
+            {/* --- UI Improvement: Enhanced button style --- */}
             <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-br from-blue-600 to-blue-700 text-white px-5 py-2 rounded-lg shadow-md hover:shadow-lg transition-all disabled:from-blue-400 disabled:to-blue-500 disabled:shadow-none disabled:cursor-not-allowed flex items-center justify-center gap-2"
               onClick={() => sendForTextCompletion(prompt)}
               disabled={isLoading || !prompt}
             >
@@ -139,7 +131,6 @@ export default function HomePage({ toggleLoading }) {
           </div>
         </div>
 
-        {/* --- UX Improvement: Clickable examples --- */}
         <div className="mt-8">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Or get started with an example:
@@ -150,7 +141,8 @@ export default function HomePage({ toggleLoading }) {
                 key={ex}
                 onClick={() => handleExampleClick(ex)}
                 disabled={isLoading}
-                className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                // --- UI Improvement: More interactive hover effect ---
+                className="px-3 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-all hover:scale-105 disabled:opacity-50 disabled:scale-100"
               >
                 {ex}
               </button>
@@ -158,26 +150,33 @@ export default function HomePage({ toggleLoading }) {
           </div>
         </div>
 
-        {/* --- UX Improvement: Tip presented in a dismissible callout box --- */}
-        <div className="mt-12 w-full">
-          <button
+        {/* --- UI Improvement: More inviting 'Tips' section --- */}
+        <div className="mt-12 w-full flex justify-center">
+          <div
             onClick={showTip}
-            className="flex items-center gap-2 mx-auto text-sm text-blue-600 dark:text-blue-400 font-medium hover:underline"
+            className="group flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700/50 transition-colors"
           >
-            <Lightbulb size={16} /> How to write better prompts
-          </button>
-          {tip && (
-            <div className="relative mt-4 p-4 bg-blue-50 dark:bg-gray-800 border border-blue-200 dark:border-gray-600 rounded-lg text-left text-sm text-blue-800 dark:text-blue-200 animate-fade-in-down">
-              <button
-                onClick={() => setTip("")}
-                className="absolute top-1 right-2 text-blue-400 hover:text-blue-600 font-bold"
-              >
-                ×
-              </button>
-              <p>{tip}</p>
-            </div>
-          )}
+            <Lightbulb
+              className="text-blue-500 dark:text-blue-400 transition-transform group-hover:scale-110"
+              size={18}
+            />
+            <span className="text-sm text-blue-600 dark:text-blue-400 font-medium group-hover:underline">
+              How to write better prompts
+            </span>
+          </div>
         </div>
+
+        {tip && (
+          <div className="relative mt-4 p-4 bg-blue-50 dark:bg-gray-800 border border-blue-200 dark:border-gray-600 rounded-lg text-left text-sm text-blue-800 dark:text-blue-200 animate-fade-in-down">
+            <button
+              onClick={() => setTip("")}
+              className="absolute top-1 right-2 text-blue-400 hover:text-blue-600 font-bold"
+            >
+              ×
+            </button>
+            <p>{tip}</p>
+          </div>
+        )}
       </div>
     </main>
   );
