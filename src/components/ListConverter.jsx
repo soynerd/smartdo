@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Trash2,
   Plus,
@@ -6,12 +6,14 @@ import {
   Save,
   GripVertical,
   LoaderCircle,
+  Pencil,
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import auth from "../config/config";
 import saveTaskToDb from "../api/saveTask";
 
 const LOCAL_STORAGE_KEY = auth.local_Storage.currentStorageKey;
+
 const ensureIds = (taskData) =>
   taskData.map((section, index) => ({
     ...section,
@@ -29,10 +31,13 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
   const [isSaved, setIsSaved] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [dbTaskId, setDbTaskId] = useState(null);
+  const [editingSectionId, setEditingSectionId] = useState(null);
+  const [editingItemId, setEditingItemId] = useState(null);
 
   useEffect(() => {
-    if (selfTask) setTasks(ensureIds([{ title: "New Tasks", items: [] }]));
-    else if (data?.length) {
+    if (selfTask) {
+      setTasks(ensureIds([{ title: "My New Checklist", items: [] }]));
+    } else if (data?.length) {
       const tasksWithIds = ensureIds(data);
       setTasks(tasksWithIds);
       localStorage.setItem(
@@ -42,9 +47,16 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
     } else {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (stored) {
-        const storedTasks = JSON.parse(stored).task_data || [];
-        setDbTaskId(JSON.parse(stored).id || null);
-        setTasks(ensureIds(storedTasks));
+        const storedData = JSON.parse(stored);
+        const storedTasks = storedData.task_data || [];
+        setDbTaskId(storedData.id || null);
+        setTasks(
+          ensureIds(
+            storedTasks.length > 0
+              ? storedTasks
+              : [{ title: "My Checklist", items: [] }]
+          )
+        );
       }
     }
   }, [data, selfTask]);
@@ -54,7 +66,7 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
     if (!selfTask) {
       localStorage.setItem(
         LOCAL_STORAGE_KEY,
-        JSON.stringify({ id: null, task_data: updatedTasks })
+        JSON.stringify({ id: dbTaskId, task_data: updatedTasks })
       );
     }
   };
@@ -68,9 +80,7 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
     ) {
       return;
     }
-
     let updatedTasks = Array.from(tasks);
-
     if (type === "section") {
       const [reorderedSection] = updatedTasks.splice(source.index, 1);
       updatedTasks.splice(destination.index, 0, reorderedSection);
@@ -84,6 +94,35 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
       const [movedItem] = sourceSection.items.splice(source.index, 1);
       destSection.items.splice(destination.index, 0, movedItem);
     }
+    saveTasks(updatedTasks);
+  };
+
+  const handleUpdateSectionTitle = (sectionId, newTitle) => {
+    setEditingSectionId(null);
+    const updatedTasks = tasks.map((section) => {
+      if (section.id === sectionId) {
+        return { ...section, title: newTitle.trim() || section.title };
+      }
+      return section;
+    });
+    saveTasks(updatedTasks);
+  };
+
+  const handleUpdateItemLabel = (sectionId, itemId, newLabel) => {
+    setEditingItemId(null); // Exit editing mode for this item
+    const updatedTasks = tasks.map((section) => {
+      if (section.id === sectionId) {
+        return {
+          ...section,
+          items: section.items.map((item) =>
+            item.id === itemId
+              ? { ...item, label: newLabel.trim() || item.label } // Revert if empty, else update
+              : item
+          ),
+        };
+      }
+      return section;
+    });
     saveTasks(updatedTasks);
   };
 
@@ -165,10 +204,11 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
         task_data: cleanTasks,
       },
     ]);
-    setIsSaving(false);
 
-    if (res === true) {
-      setIsSaved("success");
+    setIsSaving(false);
+    if (res.status === true) {
+      if (res.statusCode === 200) setIsSaved("success");
+      if (res.statusCode === 208) setIsSaved("alreadySaved");
     } else {
       setIsSaved("error");
     }
@@ -182,16 +222,10 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
         item.label.toLowerCase().includes(search.toLowerCase())
       ),
     }))
-    .filter(
-      (section) =>
-        search.trim() === "" ||
-        section.items.length > 0 ||
-        tasks.findIndex((t) => t.id === section.id) === 0
-    );
+    .filter((section) => search.trim() === "" || section.items.length > 0);
 
   return (
     <div className="max-w-3xl mx-auto p-4 font-sans">
-      {/* --- Notifications --- */}
       {isSaved === "success" && (
         <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in-down">
           Saved successfully!
@@ -202,9 +236,14 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
           Server error. Try again!
         </div>
       )}
+      {isSaved === "alreadySaved" && (
+        <div className="fixed top-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-fade-in-down">
+          Already saved. No changes made.
+        </div>
+      )}
 
       <h2 className="text-3xl font-bold mb-6 text-center text-primary dark:text-white">
-        📝 {mainTitle || "Smart Checklist"}
+        📝 {tasks[0]?.title || mainTitle || "Smart Checklist"}
       </h2>
       <input
         type="text"
@@ -241,13 +280,11 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
                         snapshot.isDragging ? "shadow-2xl" : "shadow-md"
                       } ${
                         index === 0
-                          ? "border-transparent"
+                          ? "border-primary/30"
                           : "border-gray-200 dark:border-gray-700"
                       } bg-white dark:bg-gray-800`}
                     >
-                      <div
-                        className={`flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700`}
-                      >
+                      <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
                         {index !== 0 && (
                           <div
                             {...provided.dragHandleProps}
@@ -257,14 +294,39 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
                             <GripVertical size={20} />
                           </div>
                         )}
-                        <h3
-                          className={`w-full font-semibold text-secondary dark:text-white ${
-                            index === 0 ? "text-2xl md:text-3xl" : "text-xl"
-                          }`}
-                        >
-                          {section.title}
-                        </h3>
-                        <div className="flex items-center gap-2">
+                        {editingSectionId === section.id ? (
+                          <input
+                            type="text"
+                            defaultValue={section.title}
+                            onBlur={(e) =>
+                              handleUpdateSectionTitle(
+                                section.id,
+                                e.target.value
+                              )
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter")
+                                handleUpdateSectionTitle(
+                                  section.id,
+                                  e.target.value
+                                );
+                            }}
+                            className={`w-full font-semibold bg-transparent border-b-2 border-primary dark:text-white focus:outline-none ${
+                              index === 0 ? "text-2xl md:text-3xl" : "text-xl"
+                            }`}
+                            autoFocus
+                          />
+                        ) : (
+                          <h3
+                            className={`w-full font-semibold text-secondary dark:text-white ${
+                              index === 0 ? "text-2xl md:text-3xl" : "text-xl"
+                            } cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md p-1 -ml-1`}
+                            onClick={() => setEditingSectionId(section.id)}
+                          >
+                            {section.title}
+                          </h3>
+                        )}
+                        <div className="flex items-center gap-2 pl-2">
                           {index !== 0 && (
                             <button
                               onClick={() => handleDeleteSection(section.id)}
@@ -282,17 +344,15 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
                             >
                               {isSaving ? (
                                 <>
-                                  {" "}
                                   <LoaderCircle
                                     size={18}
                                     className="animate-spin"
                                   />{" "}
-                                  Saving...{" "}
+                                  Saving...
                                 </>
                               ) : (
                                 <>
-                                  {" "}
-                                  <Save size={18} /> Save{" "}
+                                  <Save size={18} /> Save
                                 </>
                               )}
                             </button>
@@ -306,74 +366,121 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
                             {...provided.droppableProps}
                             className="p-4 space-y-3"
                           >
-                            {section.items.length === 0 && (
-                              <p className="text-center text-sm text-gray-400 dark:text-gray-500 py-2">
-                                No tasks here. Add one below!
-                              </p>
-                            )}
-                            {section.items.map((item, itemIndex) => (
-                              <Draggable
-                                key={item.id}
-                                draggableId={item.id}
-                                index={itemIndex}
-                              >
-                                {(provided, snapshot) => (
-                                  <li
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    className={`flex items-center group p-2 rounded-lg transition-all duration-300 ${
-                                      snapshot.isDragging
-                                        ? "shadow-lg bg-blue-50 dark:bg-blue-900/50"
-                                        : "bg-slate-50 dark:bg-gray-700"
-                                    }`}
+                            {index !== 0 && (
+                              <>
+                                {section.items.map((item, itemIndex) => (
+                                  <Draggable
+                                    key={item.id}
+                                    draggableId={item.id}
+                                    index={itemIndex}
                                   >
-                                    <div
-                                      {...provided.dragHandleProps}
-                                      title="Drag to reorder item"
-                                      className="cursor-grab text-gray-400 hover:text-primary p-1 mr-1"
-                                    >
-                                      <GripVertical size={20} />
-                                    </div>
-                                    <label className="flex-grow flex items-center gap-3 text-gray-800 dark:text-white">
-                                      <input
-                                        type="checkbox"
-                                        checked={item.checked}
-                                        onChange={() =>
-                                          handleToggle(section.id, item.id)
-                                        }
-                                        className="w-5 h-5 rounded-sm"
-                                      />
-                                      <span
-                                        className={`flex-grow ${
-                                          item.checked
-                                            ? "line-through text-gray-400 dark:text-gray-500"
-                                            : ""
+                                    {(provided, snapshot) => (
+                                      <li
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        className={`flex items-center group p-2 rounded-lg transition-all duration-300 ${
+                                          snapshot.isDragging
+                                            ? "shadow-lg bg-blue-50 dark:bg-blue-900/50"
+                                            : "bg-slate-50 dark:bg-gray-700"
                                         }`}
                                       >
-                                        {item.label}
-                                      </span>
-                                    </label>
-                                    <div className="flex gap-1 items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button
-                                        onClick={() =>
-                                          handleDeleteItem(section.id, item.id)
-                                        }
-                                        className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"
-                                        title="Delete item"
-                                      >
-                                        <Trash2 size={18} />
-                                      </button>
-                                    </div>
-                                  </li>
+                                        <div
+                                          {...provided.dragHandleProps}
+                                          title="Drag to reorder item"
+                                          className="cursor-grab text-gray-400 hover:text-primary p-1 mr-1"
+                                        >
+                                          <GripVertical size={20} />
+                                        </div>
+
+                                        <div className="flex-grow flex items-center gap-3">
+                                          <input
+                                            type="checkbox"
+                                            checked={item.checked}
+                                            onChange={() =>
+                                              handleToggle(section.id, item.id)
+                                            }
+                                            className="w-5 h-5 rounded-sm flex-shrink-0"
+                                          />
+                                          {editingItemId === item.id ? (
+                                            <input
+                                              type="text"
+                                              defaultValue={item.label}
+                                              className="w-full bg-transparent text-gray-800 dark:text-white border-b border-primary focus:outline-none"
+                                              onBlur={(e) =>
+                                                handleUpdateItemLabel(
+                                                  section.id,
+                                                  item.id,
+                                                  e.target.value
+                                                )
+                                              }
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Enter")
+                                                  handleUpdateItemLabel(
+                                                    section.id,
+                                                    item.id,
+                                                    e.target.value
+                                                  );
+                                                if (e.key === "Escape")
+                                                  setEditingItemId(null);
+                                              }}
+                                              autoFocus
+                                            />
+                                          ) : (
+                                            <span
+                                              className={`flex-grow cursor-pointer ${
+                                                item.checked
+                                                  ? "line-through text-gray-400 dark:text-gray-500"
+                                                  : "text-gray-800 dark:text-white"
+                                              }`}
+                                              onClick={() =>
+                                                setEditingItemId(item.id)
+                                              }
+                                            >
+                                              {item.label}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        <div className="flex gap-1 items-center ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                          <button
+                                            onClick={() =>
+                                              setEditingItemId(item.id)
+                                            }
+                                            className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                                            title="Edit item"
+                                          >
+                                            <Pencil size={18} />
+                                          </button>
+                                          <button
+                                            onClick={() =>
+                                              handleDeleteItem(
+                                                section.id,
+                                                item.id
+                                              )
+                                            }
+                                            className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50"
+                                            title="Delete item"
+                                          >
+                                            <Trash2 size={18} />
+                                          </button>
+                                        </div>
+                                      </li>
+                                    )}
+                                  </Draggable>
+                                ))}
+                                {provided.placeholder}
+                                {section.items.length === 0 && (
+                                  <p className="text-center text-sm text-gray-400 dark:text-gray-500 py-2">
+                                    No tasks here. Add one below!
+                                  </p>
                                 )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                            <AddItemInput
-                              onAdd={(label) =>
-                                handleAddItem(section.id, label)
-                              }
-                            />
+                                <AddItemInput
+                                  onAdd={(label) =>
+                                    handleAddItem(section.id, label)
+                                  }
+                                />
+                              </>
+                            )}
                           </ul>
                         )}
                       </Droppable>
@@ -387,7 +494,6 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
         </Droppable>
       </DragDropContext>
 
-      {/* --- Add New Section Form --- */}
       <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
         <h4 className="text-lg font-medium mb-2 text-gray-800 dark:text-white">
           ➕ Add New Section
@@ -416,12 +522,10 @@ const ChecklistViewer = ({ data, selfTask = false, mainTitle }) => {
 const AddItemInput = ({ onAdd }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [text, setText] = useState("");
-  const inputRef = React.useRef(null);
+  const inputRef = useRef(null);
 
   useEffect(() => {
-    if (isAdding) {
-      inputRef.current?.focus();
-    }
+    if (isAdding) inputRef.current?.focus();
   }, [isAdding]);
 
   const handleSubmit = (e) => {
@@ -432,6 +536,13 @@ const AddItemInput = ({ onAdd }) => {
     }
     onAdd(text);
     setText("");
+    inputRef.current?.focus();
+  };
+
+  const handleBlur = () => {
+    if (!text.trim()) {
+      setIsAdding(false);
+    }
   };
 
   if (!isAdding) {
@@ -454,12 +565,9 @@ const AddItemInput = ({ onAdd }) => {
         className="flex-1 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        onBlur={() => setIsAdding(false)}
+        onBlur={handleBlur}
         onKeyDown={(e) => {
-          if (e.key === "Escape") {
-            setIsAdding(false);
-            setText("");
-          }
+          if (e.key === "Escape") setIsAdding(false);
         }}
       />
       <button
